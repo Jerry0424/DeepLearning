@@ -1,3 +1,103 @@
+from sklearn.datasets import load_breast_cancer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.optimizers import Adam
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+# Load dataset
+d = load_breast_cancer()
+X = pd.DataFrame(d.data, columns=d.feature_names)
+y = pd.DataFrame(d.target, columns=['target'])
+
+# Split the dataset into training and testing set
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
+
+# Scale the features
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)  # Only transform on the test set
+
+# Define the model
+model = Sequential([
+    Dense(units=128, input_shape=[30], activation='relu'),
+    Dropout(0.5),  # Reduced dropout rate
+    Dense(units=64, activation='relu'),
+    Dropout(0.5),
+    Dense(units=1, activation='sigmoid')
+])
+
+# Compile the model
+model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+
+# Define callbacks
+early_stopping = EarlyStopping(monitor='val_loss', patience=15)
+reduce_lr = ReduceLROnPlateau(
+    monitor='val_loss',  # Changed to 'val_loss'
+    factor=0.1,
+    patience=10 ,
+    verbose=1,
+    mode='auto',
+    min_delta=0.0001,
+    cooldown=0,
+    min_lr=0
+)
+
+# Train the model
+history = model.fit(
+    X_train_scaled,
+    y_train,
+    validation_data=(X_test_scaled, y_test),
+    epochs=100,
+    callbacks=[early_stopping, reduce_lr],
+    verbose=1
+)
+
+# Evaluate the model
+eval_results = model.evaluate(X_test_scaled, y_test)
+print(f"\nTest Loss: {eval_results[0]}, Test Accuracy: {eval_results[1]}")
+
+# Predictions for confusion matrix
+y_pred = model.predict(X_test_scaled)
+y_pred_classes = (y_pred > 0.5).astype("int32")
+
+
+# Plot the training history
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(loc='upper left')
+plt.show()
+
+
+conf_matrix = confusion_matrix(y_test, y_pred_classes)
+sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted Label')
+plt.ylabel('True Label')
+plt.show()
+
+# Plot the training and validation loss
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(loc='upper left')
+plt.show()
+
+
+
+'''
 import pandas as pd
 import matplotlib.pyplot as plt
 import warnings
@@ -86,3 +186,7 @@ plt.title('Residuals of Predictions')
 plt.xlabel('Predicted MEDV')
 plt.ylabel('Residuals')
 plt.show()
+
+
+
+'''
