@@ -22,11 +22,13 @@ y = df['MEDV']
 cols = X.columns
 
 
-scaler = StandardScaler()
-X = scaler.fit_transform(X)
+
+
+scaler_X = StandardScaler()
+scaler_y = StandardScaler()
+X = scaler_X.fit_transform(X)
+y = scaler_y.fit_transform(y.values.reshape(-1,1)).flatten()
 X = pd.DataFrame(X, columns=cols)
-
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1)
 
 
@@ -66,12 +68,13 @@ print("Observations: The model shows a decreasing trend in training and validati
 
 
 preds = nn.predict(X_test).flatten()
-result = pd.DataFrame({'Actual': y_test.values, 'Prediction': preds})
+result = pd.DataFrame({'Actual': scaler_y.inverse_transform(y_test.reshape(-1, 1)).flatten(),
+                       'Prediction': scaler_y.inverse_transform(preds.reshape(-1, 1)).flatten()})
 result['Residual'] = abs(result['Actual'] - result['Prediction'])
 print(result)
 
-plt.scatter(range(len(y_test)), y_test, color='green', label='Actual', alpha=0.5)
-plt.scatter(range(len(preds)), preds, color='red', label='Prediction', alpha=0.5)
+plt.scatter(range(len(y_test)), scaler_y.inverse_transform(y_test.reshape(-1, 1)), color='green', label='Actual', alpha=0.5)
+plt.scatter(range(len(preds)), scaler_y.inverse_transform(preds.reshape(-1, 1)), color='red', label='Prediction', alpha=0.5)
 plt.title('Actual vs Predicted Values')
 plt.xlabel('Index')
 plt.ylabel('MEDV')
