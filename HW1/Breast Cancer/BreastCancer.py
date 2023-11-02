@@ -8,8 +8,6 @@ from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from tensorflow.keras.optimizers import Adam
 import pandas as pd
-import numpy as np
-import tensorflow as tf
 import matplotlib.pyplot as plt
 
 # Load dataset
@@ -23,26 +21,29 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_
 # Scale the features
 scaler = MinMaxScaler()
 X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)  # Only transform on the test set
+X_test_scaled = scaler.transform(X_test)
 
-# Define the model
+# model structure
 model = Sequential([
     Dense(units=128, input_shape=[30], activation='relu'),
     Dropout(0.5),  # Reduced dropout rate
     Dense(units=64, activation='relu'),
     Dropout(0.5),
+    Dense(units=32, activation='relu'),
+    Dropout(0.5),
     Dense(units=1, activation='sigmoid')
 ])
 
+optimizer = Adam(learning_rate=0.001)
+
 # Compile the model
-model.compile(optimizer=Adam(learning_rate=0.001), loss='binary_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
 
 # Define callbacks
-early_stopping = EarlyStopping(monitor='val_loss', patience=15)
+early_stopping = EarlyStopping(monitor='val_loss', patience=10)
 reduce_lr = ReduceLROnPlateau(
     monitor='val_loss',  # Changed to 'val_loss'
     factor=0.1,
-    patience=10 ,
     verbose=1,
     mode='auto',
     min_delta=0.0001,
@@ -50,15 +51,9 @@ reduce_lr = ReduceLROnPlateau(
     min_lr=0
 )
 
+model.summary()
 # Train the model
-history = model.fit(
-    X_train_scaled,
-    y_train,
-    validation_split=0.1,
-    epochs=100,
-    callbacks=[early_stopping, reduce_lr],
-    verbose=1
-)
+history = model.fit(X_train_scaled, y_train, validation_split=0.1, epochs=50, callbacks=[early_stopping, reduce_lr], verbose=1)
 
 # Evaluate the model
 eval_results = model.evaluate(X_test_scaled, y_test)
@@ -78,7 +73,7 @@ plt.xlabel('Epoch')
 plt.legend(loc='upper left')
 plt.show()
 
-
+# Plot the confusion matrix
 conf_matrix = confusion_matrix(y_test, y_pred_classes)
 sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues')
 plt.title('Confusion Matrix')
@@ -90,8 +85,8 @@ plt.show()
 plt.plot(history.history['loss'], label='Train Loss')
 plt.plot(history.history['val_loss'], label='Validation Loss')
 plt.title('Model Loss')
-plt.ylabel('Loss')
 plt.xlabel('Epoch')
+plt.ylabel('Loss')
 plt.legend(loc='upper left')
 plt.show()
 

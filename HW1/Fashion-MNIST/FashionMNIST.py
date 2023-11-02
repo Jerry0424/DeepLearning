@@ -6,12 +6,12 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
-# Constants
+# hyperparameters
 NUM_CLASSES = 10
-INPUT_SIZE = 28  # Assuming input images are 28x28 pixels
+INPUT_SIZE = 28
 HIDDEN_SIZE = 500
-LEARNING_RATE = 0.005
-BATCH_SIZE = 100
+LEARNING_RATE = 0.01
+BATCH_SIZE = 500
 EPOCHS = 8
 TRAIN_DATA_SIZE = 58000
 VAL_DATA_SIZE = 2000
@@ -40,8 +40,9 @@ class ConvNet(nn.Module):
         return out
 
 def get_data_loaders():
-    train_data = datasets.FashionMNIST(root='./data', train=True, download=True, transform= transforms.ToTensor())
-    test_data = datasets.FashionMNIST(root='./data', train=False, download=True, transform= transforms.ToTensor())
+    # input and normalize data
+    train_data = datasets.FashionMNIST(root='./data', train=True, download=True, transform=transforms.ToTensor())
+    test_data = datasets.FashionMNIST(root='./data', train=False, download=True, transform=transforms.ToTensor())
     train_data, val_data = random_split(train_data, [TRAIN_DATA_SIZE, VAL_DATA_SIZE])
     train_loader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True)
     val_loader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True)
@@ -50,11 +51,19 @@ def get_data_loaders():
 
 
 def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler):
-    epoch_losses, epoch_val_losses, epoch_accuracies, val_accuracies = [], [], [], []
+    epoch_losses = []
+    epoch_val_losses = []
+    epoch_accuracies = []
+    val_accuracies = []
+
+    # Train model
     for epoch in range(EPOCHS):
         model.train()
-        total_loss, total_val_loss = 0, 0
-        correct, total = 0, 0
+
+        total_loss = 0
+        total_val_loss = 0
+        correct = 0
+        total = 0
 
         # Training loop
         for inputs, targets in train_loader:
@@ -99,7 +108,6 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, scheduler
     return epoch_losses, epoch_val_losses, epoch_accuracies, val_accuracies
 
 
-
 def evaluate_model(model, loader, confusion=False):
     model.eval()
     all_predicted = []
@@ -113,7 +121,6 @@ def evaluate_model(model, loader, confusion=False):
             all_targets.extend(targets.cpu().numpy())
 
     if confusion:
-        # Calculate the confusion matrix
         cm = confusion_matrix(all_targets, all_predicted)
         return cm
     else:
@@ -132,7 +139,8 @@ if __name__ == "__main__":
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.7)
+    # update learning rate
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.8)
 
     # Load data
     train_loader, val_loader, test_loader = get_data_loaders()
@@ -141,19 +149,18 @@ if __name__ == "__main__":
     train_losses, val_losses, train_accuracies, val_accuracies = train_model(
         model, train_loader, val_loader, criterion, optimizer, scheduler)
 
-    # Plotting the training and validation loss and accuracy
-    plt.figure(figsize=(12, 4))
-    plt.subplot(1, 2, 1)
+    # Plot the training and validation loss
     plt.plot(train_losses, label='Training Loss')
-    plt.plot(val_losses, label='Validation Loss', linestyle='--')
+    plt.plot(val_losses, label='Validation Loss')
     plt.title('Training & Validation Loss')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
+    plt.show()
 
-    plt.subplot(1, 2, 2)
+    # Plot the training history
     plt.plot(train_accuracies, label='Training Accuracy')
-    plt.plot(val_accuracies, label='Validation Accuracy', linestyle='--')
+    plt.plot(val_accuracies, label='Validation Accuracy')
     plt.title('Training & Validation Accuracy')
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy')
@@ -164,10 +171,10 @@ if __name__ == "__main__":
     test_accuracy = evaluate_model(model, test_loader)
     print(f"Test Accuracy: {test_accuracy:.2f}%")
 
-    # Generate and plot the confusion matrix
-    cm = evaluate_model(model, test_loader, confusion=True)
+    # Plot the confusion matrix
+    conf_matrix = evaluate_model(model, test_loader, confusion=True)
     plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=range(NUM_CLASSES), yticklabels=range(NUM_CLASSES))
+    sns.heatmap(conf_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=range(NUM_CLASSES), yticklabels=range(NUM_CLASSES))
     plt.title('Confusion Matrix')
     plt.ylabel('True Label')
     plt.xlabel('Predicted Label')
