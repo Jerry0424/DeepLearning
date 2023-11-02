@@ -54,7 +54,7 @@ reduce_lr = ReduceLROnPlateau(
 history = model.fit(
     X_train_scaled,
     y_train,
-    validation_data=(X_test_scaled, y_test),
+    validation_split=0.1,
     epochs=100,
     callbacks=[early_stopping, reduce_lr],
     verbose=1
